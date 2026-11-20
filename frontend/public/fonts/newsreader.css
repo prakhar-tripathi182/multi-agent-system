@@ -1,0 +1,53 @@
+/*
+  Newsreader, self-hosted (no external CDN). Licensed under the SIL Open Font
+  License 1.1: see OFL.txt in this folder.
+
+  Files are the static 14pt optical-size cuts from the downloaded archive.
+  URLs are relative to this CSS file, so they work in dev and in a production
+  build (Vite copies everything in public/ to the build root unchanged).
+
+  Weights used by the interface:
+    500 (Medium)   -> regular interface text
+    600 (SemiBold) -> headings, buttons, emphasized labels
+*/
+
+@font-face {
+  font-family: "Newsreader";
+  src: url("./Newsreader_14pt-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Newsreader";
+  src: url("./Newsreader_14pt-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
+  Reusable rules: link this file from index.html with
+    <link rel="stylesheet" href="/fonts/newsreader.css" />
+  and these apply across the whole interface.
+*/
+html,
+body,
+button,
+input,
+textarea,
+select {
+  font-family: "Newsreader", serif;
+  font-weight: 500;
+}
+
+h1, h2, h3, h4, h5, h6,
+button,
+label,
+strong,
+b,
+th {
+  font-family: "Newsreader", serif;
+  font-weight: 600;
+}
