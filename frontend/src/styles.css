@@ -152,3 +152,18 @@ html { scrollbar-color: var(--sage) var(--ink); }
 .download { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
 .download .hint { color: var(--muted); font-size: 0.9rem; }
 .download .error { flex-basis: 100%; margin: 0; }
+
+/* Report card header: heading on the left, Copy button on the right */
+.card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.card-header h2 { margin: 0 0 8px; }
+button.small { padding: 6px 14px; font-size: 0.85rem; }
+
+/* Compact research metadata strip */
+.metadata {
+  display: flex; flex-wrap: wrap; gap: 8px 24px;
+  margin: 0 0 18px; padding: 12px 18px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+}
+.metadata div { display: flex; flex-direction: column; min-width: 0; }
+.metadata dt { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.metadata dd { margin: 0; font-size: 0.95rem; overflow-wrap: anywhere; }

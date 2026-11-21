@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 // Backend address (override with VITE_API_URL in frontend/.env)
@@ -12,6 +12,24 @@ const STEPS = [
   { step: "critic", label: "Critic", desc: "Reviewing the report" },
 ];
 
+// ---- Metadata helpers: derive values only from real backend output ----
+
+// Each result returned by the search tool contains one "URL:..." line,
+// so counting those lines gives the number of sources actually retrieved.
+// (Returns null if the search failed or produced no results.)
+function countSources(searchText) {
+  if (!searchText) return null;
+  const n = (searchText.match(/^URL:/gm) || []).length;
+  return n > 0 ? n : null;
+}
+
+// The critic replies in the format "Score: X/10". Returns "X/10" or null.
+function parseScore(criticText) {
+  if (!criticText) return null;
+  const m = criticText.match(/Score:\s*\**\s*(\d+(?:\.\d+)?)\s*\/\s*10/i);
+  return m ? `${m[1]}/10` : null;
+}
+
 export default function App() {
   const [topic, setTopic] = useState("");
   const [running, setRunning] = useState(false);
@@ -22,24 +40,44 @@ export default function App() {
   // output per step (search results, scraped text, report, feedback)
   const [data, setData] = useState({});
   const sourceRef = useRef(null);
+  // Synchronous guard so a double-click can never start two runs at once
+  const runningRef = useRef(false);
   // Topic that was actually researched (the input box may be edited afterwards)
   const [researchedTopic, setResearchedTopic] = useState("");
+  // Set when the pipeline finishes successfully
+  const [completedAt, setCompletedAt] = useState(null);
   // PDF download state
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState("");
+  // Copy report state: "idle" | "copied" | "error"
+  const [copyState, setCopyState] = useState("idle");
+  const copyTimer = useRef(null);
 
-  function start(e) {
-    e.preventDefault();
-    const t = topic.trim();
-    if (!t || running) return;
+  // Close the stream and clear the timer if the page is left
+  useEffect(() => () => {
+    sourceRef.current?.close();
+    clearTimeout(copyTimer.current);
+  }, []);
 
-    // Reset state for a new run
+  // Start a research run for topic `t`. Used by both the form and "Run Again",
+  // so there is only one SSE implementation.
+  function runResearch(t) {
+    if (!t || runningRef.current) return;
+    runningRef.current = true;
+
+    // Make sure no old stream is still open
+    sourceRef.current?.close();
+
+    // Reset everything from the previous run
     setStatus({});
     setData({});
     setError("");
     setPdfError("");
-    setResearchedTopic(t);
+    setCopyState("idle");
+    setCompletedAt(null);
     setComplete(false);
+    setResearchedTopic(t);
+    setTopic(t); // keep the topic in the input box
     setRunning(true);
 
     // Open the SSE stream from GET /research
@@ -47,10 +85,13 @@ export default function App() {
     sourceRef.current = es;
 
     es.onmessage = (msg) => {
+      if (sourceRef.current !== es) return; // ignore events from an old stream
       const ev = JSON.parse(msg.data);
       if (ev.step === "pipeline" && ev.status === "complete") {
+        setCompletedAt(new Date()); // record when the research really finished
         setComplete(true);
         setRunning(false);
+        runningRef.current = false;
         es.close(); // stop, otherwise EventSource would reconnect and rerun
         return;
       }
@@ -59,10 +100,48 @@ export default function App() {
     };
 
     es.onerror = () => {
+      if (sourceRef.current !== es) return;
       es.close();
       setRunning(false);
+      runningRef.current = false;
       setError("Connection to the backend was lost or failed. Is it running, and are the API keys set?");
     };
+  }
+
+  function start(e) {
+    e.preventDefault();
+    runResearch(topic.trim());
+  }
+
+  // Run Again: same topic as the last run, no retyping needed
+  function runAgain() {
+    runResearch(researchedTopic);
+  }
+
+  // Copy the report's raw Markdown (not the critic review) to the clipboard
+  async function copyReport() {
+    clearTimeout(copyTimer.current);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(data.writer);
+      } else {
+        // Fallback for browsers/contexts without the async clipboard API
+        const ta = document.createElement("textarea");
+        ta.value = data.writer;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        ta.remove();
+        if (!ok) throw new Error("copy command failed");
+      }
+      setCopyState("copied");
+    } catch {
+      setCopyState("error");
+    }
+    // Show the confirmation briefly, then go back to normal
+    copyTimer.current = setTimeout(() => setCopyState("idle"), 2000);
   }
 
   // Send the data we already have to the backend and save the returned PDF.
@@ -104,10 +183,15 @@ export default function App() {
     }
   }
 
-  function stop() {
-    sourceRef.current?.close();
-    setRunning(false);
-  }
+  // ---- Metadata values (with honest fallbacks) ----
+  const sourceCount = countSources(data.search);
+  const score = parseScore(data.critic);
+  const runStatus = complete ? "Completed" : running ? "In progress" : "Interrupted";
+  const completedText = completedAt
+    ? completedAt.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+    : running ? "In progress" : "Not completed";
+  const scoreText = score || (running && !data.critic ? "Pending" : "Unavailable");
+  const sourcesText = sourceCount ?? (running && !data.search ? "Pending" : "Unavailable");
 
   return (
     <main className="container">
@@ -126,11 +210,10 @@ export default function App() {
           placeholder="Enter a research topic…"
           disabled={running}
         />
-        {running ? (
-          <button type="button" className="secondary" onClick={stop}>Stop</button>
-        ) : (
-          <button type="submit" disabled={!topic.trim()}>Research</button>
-        )}
+        {/* Disabled while a run is in progress, so two runs can't start at once */}
+        <button type="submit" disabled={running || !topic.trim()}>
+          {running ? "Researching…" : "Research"}
+        </button>
       </form>
 
       {error && <div className="error">{error}</div>}
@@ -162,9 +245,30 @@ export default function App() {
         </details>
       )}
 
+      {/* Research metadata: only real values from this run */}
+      {data.writer && (
+        <dl className="metadata" aria-label="Research metadata">
+          <div><dt>Topic</dt><dd>{researchedTopic}</dd></div>
+          <div><dt>Completed</dt><dd>{completedText}</dd></div>
+          <div><dt>Sources retrieved</dt><dd>{sourcesText}</dd></div>
+          <div><dt>Critic score</dt><dd>{scoreText}</dd></div>
+          <div><dt>Status</dt><dd>{runStatus}</dd></div>
+        </dl>
+      )}
+
       {data.writer && (
         <section className="card report">
-          <h2>Report</h2>
+          <div className="card-header">
+            <h2>Report</h2>
+            <button
+              type="button"
+              className="secondary small"
+              onClick={copyReport}
+              aria-live="polite"
+            >
+              {copyState === "copied" ? "Copied!" : copyState === "error" ? "Copy failed" : "Copy Report"}
+            </button>
+          </div>
           <ReactMarkdown>{data.writer}</ReactMarkdown>
         </section>
       )}
@@ -176,17 +280,24 @@ export default function App() {
         </section>
       )}
 
-      {/* Enabled only once the whole pipeline has finished with a report */}
-      {(data.writer || complete) && (
+      {/* Actions: PDF is enabled only once the whole pipeline has finished */}
+      {(data.writer || complete || (researchedTopic && !running)) && (
         <div className="download">
-          <button
-            type="button"
-            onClick={downloadPdf}
-            disabled={!complete || !data.writer || pdfLoading}
-          >
-            {pdfLoading ? "Preparing PDF�" : "Download PDF"}
-          </button>
-          {!complete && <span className="hint">Available when the pipeline finishes.</span>}
+          {(data.writer || complete) && (
+            <button
+              type="button"
+              onClick={downloadPdf}
+              disabled={!complete || !data.writer || pdfLoading}
+            >
+              {pdfLoading ? "Preparing PDF…" : "Download PDF"}
+            </button>
+          )}
+          {researchedTopic && !running && (
+            <button type="button" className="secondary" onClick={runAgain}>
+              Run Again
+            </button>
+          )}
+          {!complete && running && <span className="hint">Available when the pipeline finishes.</span>}
           {pdfError && <div className="error">{pdfError}</div>}
         </div>
       )}
