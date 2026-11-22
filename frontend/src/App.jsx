@@ -12,6 +12,16 @@ const STEPS = [
   { step: "critic", label: "Critic", desc: "Reviewing the report" },
 ];
 
+// Explanatory overview cards shown below the research workspace
+const WORKFLOW_STAGES = [
+  { num: "01", title: "Search", desc: "Retrieve relevant web results using Tavily." },
+  { num: "02", title: "Read", desc: "Select and extract relevant source content." },
+  { num: "03", title: "Write", desc: "Generate a structured research report." },
+  { num: "04", title: "Critique", desc: "Evaluate the report and provide a score." },
+];
+
+const TECH_STACK = ["Python", "LangChain", "Groq", "Tavily", "FastAPI", "React", "Vite"];
+
 // ---- Metadata helpers: derive values only from real backend output ----
 
 // Each result returned by the search tool contains one "URL:..." line,
@@ -93,6 +103,13 @@ export default function App() {
         setRunning(false);
         runningRef.current = false;
         es.close(); // stop, otherwise EventSource would reconnect and rerun
+        return;
+      }
+      if (ev.step === "pipeline" && ev.status === "error") {
+        setError(ev.detail || "The research pipeline encountered an error.");
+        setRunning(false);
+        runningRef.current = false;
+        es.close();
         return;
       }
       setStatus((s) => ({ ...s, [ev.step]: ev.status }));
@@ -195,26 +212,34 @@ export default function App() {
 
   return (
     <main className="container">
-      <header>
-        <h1>Multi-Agent Research Pipeline</h1>
+      <header className="hero">
+        <p className="eyebrow">MULTI-AGENT RESEARCH PIPELINE</p>
+        <h1>Research that goes beyond the first answer.</h1>
         <p className="subtitle">
-          Four agents search, read, write and critique a report on any topic.
+          From web search to source analysis, structured reporting and AI critique.
+          Turn any topic into a research brief you can explore, examine and download.
         </p>
       </header>
 
-      <form onSubmit={start} className="search">
-        <input
-          type="text"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder="Enter a research topic…"
-          disabled={running}
-        />
-        {/* Disabled while a run is in progress, so two runs can't start at once */}
-        <button type="submit" disabled={running || !topic.trim()}>
-          {running ? "Researching…" : "Research"}
-        </button>
-      </form>
+      <section className="search-box" aria-label="Research input">
+        <label htmlFor="topic-input" className="input-label">
+          WHAT WOULD YOU LIKE TO RESEARCH?
+        </label>
+        <form onSubmit={start} className="search">
+          <input
+            id="topic-input"
+            type="text"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="Enter a research topic…"
+            disabled={running}
+          />
+          {/* Disabled while a run is in progress, so two runs can't start at once */}
+          <button type="submit" disabled={running || !topic.trim()}>
+            {running ? "Researching…" : "Research"}
+          </button>
+        </form>
+      </section>
 
       {error && <div className="error">{error}</div>}
 
@@ -301,6 +326,51 @@ export default function App() {
           {pdfError && <div className="error">{pdfError}</div>}
         </div>
       )}
+
+      {/* Explanatory workflow overview */}
+      <section className="workflow" aria-labelledby="workflow-heading">
+        <h2 id="workflow-heading">Four stages. One research brief.</h2>
+        <p className="workflow-desc">
+          A sequential AI-powered workflow that transforms a research topic into a structured, reviewed report.
+        </p>
+        <ol className="workflow-grid">
+          {WORKFLOW_STAGES.map(({ num, title, desc }) => (
+            <li key={num} className="workflow-card">
+              <h3>
+                <span className="stage-num">{num} —</span> {title}
+              </h3>
+              <p>{desc}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <footer className="site-footer">
+        <div className="footer-grid">
+          <div className="footer-col">
+            <h2>Built with</h2>
+            <ul className="tech-list">
+              {TECH_STACK.map((tech) => (
+                <li key={tech}>{tech}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="footer-col">
+            <h2>Explore the project</h2>
+            <a
+              className="footer-link"
+              href="https://github.com/prakhar-tripathi182/multi-agent-system"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View Source on GitHub ↗
+            </a>
+          </div>
+        </div>
+        <p className="footer-bottom">
+          Multi-Agent Research Pipeline — Built for deeper research.
+        </p>
+      </footer>
     </main>
   );
 }

@@ -73,12 +73,20 @@ PDF_TEMPLATE = """
 """
 
 
-# The PDF built-in Times font has no glyph for some Unicode characters
-# (they would print as black squares), so swap them for plain equivalents.
+# The PDF built-in Times font only supports Latin-1/WinAnsi characters
+# (missing glyphs print as black squares), so swap them for plain equivalents.
 _UNSUPPORTED_CHARS = {
     "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2212": "-",  # odd hyphens / minus
     "\u202f": " ", "\u2009": " ", "\u200a": " ", "\u2007": " ",   # thin / narrow spaces
     "\u200b": "", "\u2060": "", "\ufeff": "",                     # zero-width characters
+    # Subscripts & superscripts not in Latin-1 (e.g. chemical formulas, units)
+    "\u2070": "0", "\u2074": "4", "\u2075": "5", "\u2076": "6",
+    "\u2077": "7", "\u2078": "8", "\u2079": "9", "\u207a": "+", "\u207b": "-",
+    "\u2080": "0", "\u2081": "1", "\u2082": "2", "\u2083": "3", "\u2084": "4",
+    "\u2085": "5", "\u2086": "6", "\u2087": "7", "\u2088": "8", "\u2089": "9",
+    # Common scientific symbols
+    "\u2192": "->", "\u2190": "<-", "\u2265": ">=", "\u2264": "<=",
+    "\u2248": "~", "\u2260": "!=",
 }
 
 
@@ -114,9 +122,13 @@ def build_report_pdf(topic: str, report_markdown: str, critique_markdown: str = 
     if not report_markdown or not report_markdown.strip():
         raise PDFGenerationError("The report is empty.")
 
-    report_markdown = clean_text(report_markdown)
-    critique_markdown = clean_text(critique_markdown) if critique_markdown else critique_markdown
-    topic = clean_text(topic)
+    report_markdown = clean_text(report_markdown).replace("<", "&lt;")
+    critique_markdown = (
+        clean_text(critique_markdown).replace("<", "&lt;")
+        if critique_markdown
+        else critique_markdown
+    )
+    topic = clean_text(topic).strip() or "Research Report"
     report_markdown = ensure_blank_line_before_lists(report_markdown)
     if critique_markdown:
         critique_markdown = ensure_blank_line_before_lists(critique_markdown)

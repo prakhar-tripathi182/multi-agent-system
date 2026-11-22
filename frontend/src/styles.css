@@ -2,21 +2,31 @@
   Fonts: Newsreader is applied globally by /fonts/newsreader.css
   (500 for text, 600 for headings/buttons/labels). Do not set font-family
   or other weights here, so the font stays consistent everywhere.
+
+  Colours: ALL colours come from the design tokens in :root below
+  ("Midnight + Electric Amber"). Change the look there, not in the rules.
 */
 
 :root {
-  /* Palette (from the supplied image) */
-  --ink:   #11150C; /* page background, text on buttons */
-  --slate: #393A34; /* cards, inputs */
-  --sage:  #697665; /* borders, accents */
-  --cream: #ECE0CD; /* text, primary button */
+  color-scheme: dark; /* native controls (inputs, scrollbars) follow the dark theme */
 
-  --bg: var(--ink);
-  --card: var(--slate);
-  --text: var(--cream);
-  --muted: rgba(236, 224, 205, 0.7); /* cream, softened */
-  --border: var(--sage);
-  --accent: var(--sage);
+  /* ---- Base palette ---- */
+  --bg:        #101820; /* page background */
+  --bg-2:      #1B2935; /* secondary background: panels, inputs, idle stages */
+  --surface:   #263B4A; /* elevated surfaces: report, critic, active stages */
+  --accent:    #F2A65A; /* primary accent: actions, active stage, highlights */
+  --text:      #F4F1EA; /* main text */
+  --text-2:    #AAB7C2; /* secondary text */
+  --border:    #394B59; /* borders and dividers */
+  --success:   #79B89A; /* completed */
+  --error:     #E47777; /* errors */
+
+  /* ---- Derived tokens (computed from the palette, no new colours) ---- */
+  --on-accent:     var(--bg);                                         /* text on amber buttons */
+  --accent-hover:  color-mix(in srgb, var(--accent) 85%, white);      /* hovered amber */
+  --accent-soft:   color-mix(in srgb, var(--accent) 14%, transparent);/* faint amber tint */
+  --error-soft:    color-mix(in srgb, var(--error) 14%, var(--bg));   /* error panel */
+  --scroll-thumb:  color-mix(in srgb, var(--text-2) 45%, var(--bg));  /* scrollbar thumb */
 }
 
 * { box-sizing: border-box; }
@@ -29,45 +39,94 @@ body {
   line-height: 1.6;
 }
 
-.container { max-width: 820px; margin: 0 auto; padding: 48px 20px 80px; }
+::selection { background: var(--accent-soft); color: var(--text); }
 
-header h1 { font-size: 2.2rem; margin: 0 0 4px; }
-.subtitle { color: var(--muted); margin: 0 0 28px; }
+/* Keyboard focus: one consistent amber ring for every interactive element */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.search { display: flex; gap: 10px; margin-bottom: 24px; }
+.container { max-width: 820px; margin: 0 auto; padding: 44px 20px 48px; }
+
+/* ---- Hero header ---- */
+.hero { margin-bottom: 26px; }
+.eyebrow {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.hero h1 {
+  font-size: clamp(2rem, 4.5vw, 2.7rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 12px;
+}
+.subtitle { color: var(--text-2); font-size: 1.04rem; max-width: 62ch; margin: 0; }
+
+/* ---- Search form ---- */
+.search-box {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+.input-label {
+  display: block;
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin-bottom: 10px;
+}
+.search { display: flex; gap: 10px; margin: 0; }
 .search input {
   flex: 1;
-  padding: 12px 14px;
-  font-size: 1rem;
+  min-width: 0;
+  padding: 13px 15px;
+  font-size: 1.02rem;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--card);
+  background: var(--bg);
   color: var(--text);
+  transition: border-color 0.15s;
 }
-.search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.search input::placeholder { color: var(--text-2); opacity: 0.8; }
+.search input:hover:not(:disabled) { border-color: var(--text-2); }
+.search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.search input:disabled { opacity: 0.6; }
 
+/* ---- Buttons: amber primary, outlined secondary ---- */
 button {
   padding: 12px 22px;
   font-size: 1rem;
-  border: 0;
+  border: 1px solid var(--accent);
   border-radius: 8px;
-  background: var(--cream);
-  color: var(--ink);
+  background: var(--accent);
+  color: var(--on-accent);
   cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
+button:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+button:active:not(:disabled) { background: var(--accent); }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
-button.secondary { background: transparent; color: var(--cream); border: 1px solid var(--sage); }
 
+button.secondary { background: transparent; color: var(--text); border-color: var(--border); }
+button.secondary:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+button.secondary:active:not(:disabled) { background: transparent; }
+
+/* ---- Error message ---- */
 .error {
-  background: var(--slate);
-  border: 1px solid var(--cream);
-  color: var(--cream);
+  background: var(--error-soft);
+  border: 1px solid var(--error);
+  color: var(--error);
   padding: 12px 14px;
   border-radius: 8px;
   margin-bottom: 20px;
 }
 
-/* Progress tracker */
+/* ---- Progress tracker: idle -> running (amber) -> done (green) ---- */
 .steps {
   list-style: none;
   padding: 0;
@@ -77,93 +136,188 @@ button.secondary { background: transparent; color: var(--cream); border: 1px sol
   gap: 10px;
 }
 .steps li {
-  background: var(--card);
+  background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  opacity: 0.55;
+  opacity: 0.6;
 }
-.steps li.running { opacity: 1; border-color: var(--cream); }
-.steps li.done { opacity: 1; border-color: var(--sage); background: var(--slate); }
-.steps .desc { font-size: 0.8rem; color: var(--muted); }
+.steps li.running { opacity: 1; background: var(--surface); border-color: var(--accent); }
+.steps li.done { opacity: 1; background: var(--bg-2); border-color: var(--success); }
+.steps .desc { font-size: 0.8rem; color: var(--text-2); }
 .steps .dot {
   width: 10px; height: 10px; border-radius: 50%;
   background: var(--border); margin-bottom: 4px;
 }
-.steps li.running .dot { background: var(--cream); animation: pulse 1s infinite; }
-.steps li.done .dot { background: var(--sage); }
+.steps li.running .dot { background: var(--accent); animation: pulse 1s infinite; }
+.steps li.done .dot { background: var(--success); }
 
 @keyframes pulse { 50% { opacity: 0.3; } }
 
+/* ---- Content panels ---- */
+/* Raw-content panels (search results, scraped text): quieter, secondary background */
 .card {
-  background: var(--card);
+  background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 18px 22px;
   margin-bottom: 18px;
 }
+/* Generated report and critic review: elevated surface for the main reading area */
+.card.report, .card.critique { background: var(--surface); }
 .card h2 { margin-top: 0; }
 .card summary { cursor: pointer; font-weight: inherit; }
+.card summary:hover { color: var(--accent); }
 .card pre {
   white-space: pre-wrap;
   word-break: break-word;
   font-family: inherit;
   font-size: 0.85rem;
-  color: var(--muted);
+  color: var(--text-2);
   max-height: 320px;
   overflow: auto;
 }
+.card a { color: var(--accent); }
+.card a:hover { color: var(--accent-hover); }
+.card hr { border: 0; border-top: 1px solid var(--border); }
 .critique { border-left: 4px solid var(--accent); }
 
 @media (max-width: 640px) {
   .steps { grid-template-columns: repeat(2, 1fr); }
 }
 
-
 /* ---- Scrollbars: themed to match the palette ---- */
 
 /* Firefox and modern Chromium: thumb colour, track colour */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--sage) transparent;
+  scrollbar-color: var(--scroll-thumb) transparent;
 }
 
 /* Chrome, Edge, Safari */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--sage);
+  background: var(--scroll-thumb);
   border-radius: 999px;
   border: 2px solid transparent;   /* gives the thumb breathing room */
   background-clip: padding-box;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--cream); background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); background-clip: padding-box; }
 ::-webkit-scrollbar-corner { background: transparent; }
 /* Hide the default arrow buttons */
 ::-webkit-scrollbar-button { display: none; }
 
 /* Page-level scrollbar sits on the dark page background */
-html { scrollbar-color: var(--sage) var(--ink); }
+html { scrollbar-color: var(--scroll-thumb) var(--bg); }
 
-/* Download PDF area */
+/* ---- Download PDF area ---- */
 .download { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
-.download .hint { color: var(--muted); font-size: 0.9rem; }
+.download .hint { color: var(--text-2); font-size: 0.9rem; }
 .download .error { flex-basis: 100%; margin: 0; }
 
-/* Report card header: heading on the left, Copy button on the right */
+/* ---- Report card header: heading on the left, Copy button on the right ---- */
 .card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .card-header h2 { margin: 0 0 8px; }
 button.small { padding: 6px 14px; font-size: 0.85rem; }
 
-/* Compact research metadata strip */
+/* ---- Compact research metadata strip ---- */
 .metadata {
   display: flex; flex-wrap: wrap; gap: 8px 24px;
   margin: 0 0 18px; padding: 12px 18px;
-  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px;
 }
 .metadata div { display: flex; flex-direction: column; min-width: 0; }
-.metadata dt { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.metadata dt { font-size: 0.75rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; }
 .metadata dd { margin: 0; font-size: 0.95rem; overflow-wrap: anywhere; }
+
+/* ---- Explanatory workflow section ---- */
+.workflow {
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+.workflow h2 { font-size: 1.45rem; margin: 0 0 6px; }
+.workflow-desc { color: var(--text-2); font-size: 0.98rem; margin: 0 0 18px; max-width: 60ch; }
+.workflow-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.workflow-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.workflow-card h3 { font-size: 1rem; margin: 0 0 6px; }
+.workflow-card .stage-num { color: var(--accent); }
+.workflow-card p { margin: 0; font-size: 0.88rem; line-height: 1.45; color: var(--text-2); }
+
+/* ---- Project footer ---- */
+.site-footer {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.footer-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 20px 32px;
+  margin-bottom: 22px;
+}
+.footer-col h2 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-2);
+  margin: 0 0 10px;
+}
+.tech-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tech-list li {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 0.84rem;
+  color: var(--text);
+}
+.footer-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+  font-size: 0.96rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+.footer-link:hover { color: var(--accent-hover); border-color: var(--accent); }
+.footer-bottom {
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 0.86rem;
+  color: var(--text-2);
+}
+
+@media (max-width: 640px) {
+  .workflow-grid { grid-template-columns: repeat(2, 1fr); }
+  .search-box { padding: 14px; }
+}
+@media (max-width: 480px) {
+  .search { flex-direction: column; }
+  .workflow-grid { grid-template-columns: 1fr; }
+}
